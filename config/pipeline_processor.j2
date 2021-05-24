@@ -1,0 +1,26 @@
+
+
+# ############## PROCESSORS ###############
+
+
+{% for topic in data -%}
+
+
+- pipeline.id: proc_{{topic.config}}
+  pipeline.batch.delay: 50
+  pipeline.batch.size: 200
+  path.config: "${LOGSTASH_HOME}/config/processors/{{topic.config}}.conf"
+    {% if '_daily' in topic.log_source %}
+  pipeline.workers: 8
+    {% elif '_weekly' in topic.log_source %}
+  pipeline.workers: 4
+    {% elif '_monthly' in topic.log_source %}
+  pipeline.workers: 4
+    {% else %}
+  pipeline.workers: 4
+    {% endif %}
+
+
+{% endfor %}
+
+

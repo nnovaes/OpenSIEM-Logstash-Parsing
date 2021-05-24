@@ -1,0 +1,51 @@
+################# ENRICH #################
+- pipeline.id: enrichments
+  # pipeline.batch.delay: 50
+  # pipeline.batch.size: 1000
+  # pipeline.workers: 64
+  # queue.type: persisted
+  # queue.max_bytes: 8192mb
+  path.config: "${LOGSTASH_HOME}/config/enrichments/{*}.conf"
+
+################# OUTPUT #################
+# - pipeline.id: elastic_output
+#   path.config: "${LOGSTASH_HOME}/config/outputs/elastic_output.conf"
+#   pipeline.batch.delay: 50
+#   pipeline.batch.size: 2000
+#   # pipeline.workers: 1
+# - pipeline.id: s3_output
+#   path.config: "${LOGSTASH_HOME}/config/outputs/s3_output.conf"
+#   pipeline.batch.delay: 50
+#   pipeline.batch.size: 2000
+#   # pipeline.workers: 1
+# - pipeline.id: nc4_output
+#   path.config: "${LOGSTASH_HOME}/config/outputs/nc4_output.conf"
+#   pipeline.workers: 1
+- pipeline.id: amazones_output
+  path.config: "${LOGSTASH_HOME}/config/outputs/amazones_output.conf"
+  # pipeline.batch.delay: 50
+  # pipeline.batch.size: 2000
+  # pipeline.workers: 1
+
+# ############## INPUTS  ###############
+
+
+{% for topic in data -%}
+
+- pipeline.id: input_{{topic.log_source}}
+  pipeline.batch.delay: 150
+  pipeline.batch.size: 200
+  path.config: "${LOGSTASH_HOME}/config/inputs/kafka/{{topic.log_source}}.conf"
+  {% if '_daily' in topic.log_source %}
+  pipeline.workers: 8
+  {% elif '_weekly' in topic.log_source %}
+  pipeline.workers: 4
+  {% elif '_monthly' in topic.log_source %}
+  pipeline.workers: 4
+  {% else %}
+  pipeline.workers: 4
+  {% endif %}
+
+{% endfor %}
+
+

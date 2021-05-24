@@ -1,0 +1,59 @@
+# Copyright [2021] [Cargill, Incorporated.] 
+# SPDX-License-Identifier: Apache-2.0
+input {
+  kafka {
+    bootstrap_servers => "kafka.tgrc.cargill.com:9000"
+    jaas_path => "{{ 'KAFKA_JAAS_PATH' |getenv  }}"
+    group_id => "gnsyslog-{{ log_source }}"
+    ssl_truststore_location => "{{ 'KAFKA_TRUSTSTORE_LOCATION'|getenv }}"
+    ssl_truststore_password => "${KAFKA_TRUSTSTORE_PASSWORD}"
+    security_protocol => "SASL_SSL"
+    sasl_mechanism => "SCRAM-SHA-512"
+    topics => ['{{log_source}}']
+    id => "${LOGSTASH_REPO_BRANCH_NAME}_{{log_source}}_input"
+    max_poll_records => "200"
+    consumer_threads => 2
+    partition_assignment_strategy => "round_robin"
+    auto_offset_reset => "latest"
+    codec => "{{kafka_input.codec}}"
+    decorate_events => true
+{# ------Not used by GN below------- #}
+  {#  auto_commit_interval_ms => "1000" #}
+  {#  consumer_threads => VAR_CONSUMER_THREADS #}
+  {#  connections_max_idle_ms => "540000" #}
+  {#  receive_buffer_bytes => "2097152" #}
+  {#  reconnect_backoff_ms => "200" #}
+  {#  max_poll_interval_ms => "300000" #}
+  {#  request_timeout_ms => "40000" #}
+  {#  poll_timeout_ms => "2000" #}
+  {#  heartbeat_interval_ms => "1000" #}
+  {#  session_timeout_ms => "10000" #}
+  {#  retry_backoff_ms => "1000" #}
+  }
+}
+
+filter {
+  mutate {
+    add_field => {
+      "[@metadata][index]" => "{{log_source}}"
+      "[@metadata][config]" => "{{config}}"
+      "[@metadata][output]" => "{{elastic_index}}"
+      "[@metadata][output_pipelines]" => {{output_list}}
+    }
+    copy => {"[@metadata][kafka]" => "kafka"}
+    add_field => {"[labels][ingester]" => "${LOGSTASH_REPO_BRANCH_NAME}"}
+    add_field => {"[@metadata][iv]" => "${LOGSTASH_REPO_BRANCH_VERSION}"}
+  }
+  fingerprint { 
+	source => "message"
+	target => "[event][hash]"
+	method => "SHA1"
+	key => "GNSyslog event"
+	base64encode => true
+ }
+}
+
+
+output {
+  pipeline { send_to => ["{{config}}"]}
+}
